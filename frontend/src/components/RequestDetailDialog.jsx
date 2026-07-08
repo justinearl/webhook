@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   Box,
   Chip,
+  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -16,12 +17,19 @@ import { getRequest } from '../api/endpoints'
 
 export default function RequestDetailDialog({ endpointId, requestId, onClose }) {
   const [detail, setDetail] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (requestId) {
-      getRequest(endpointId, requestId).then(setDetail)
+      setDetail(null)
+      setLoading(true)
+      getRequest(endpointId, requestId).then((data) => {
+        setDetail(data)
+        setLoading(false)
+      })
     } else {
       setDetail(null)
+      setLoading(false)
     }
   }, [endpointId, requestId])
 
@@ -29,7 +37,12 @@ export default function RequestDetailDialog({ endpointId, requestId, onClose }) 
     <Dialog open={Boolean(requestId)} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>Request details</DialogTitle>
       <DialogContent dividers>
-        {detail && (
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress />
+          </Box>
+        )}
+        {!loading && detail && (
           <Stack spacing={3}>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <Chip label={detail.method} color="primary" />

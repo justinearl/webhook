@@ -12,6 +12,7 @@ import {
   ListItemAvatar,
   ListItemButton,
   ListItemText,
+  Skeleton,
   Toolbar,
   Tooltip,
   Typography,
@@ -31,6 +32,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate()
   const { endpointId } = useParams()
   const [endpoints, setEndpoints] = useState([])
+  const [endpointsLoading, setEndpointsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
@@ -41,7 +43,7 @@ export default function DashboardLayout() {
   }, [])
 
   useEffect(() => {
-    refresh()
+    refresh().finally(() => setEndpointsLoading(false))
   }, [refresh])
 
   const handleCreate = async (payload) => {
@@ -101,22 +103,32 @@ export default function DashboardLayout() {
         </Box>
         <Divider />
         <List sx={{ overflowY: 'auto' }}>
-          {endpoints.map((ep) => (
-            <ListItemButton
-              key={ep.id}
-              selected={ep.id === endpointId}
-              onClick={() => navigate(`/endpoints/${ep.id}`)}
-            >
-              <ListItemAvatar>
-                <Avatar sx={{ bgcolor: 'primary.light' }}>{(ep.name || ep.id)[0].toUpperCase()}</Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={ep.name || ep.id.slice(0, 8)}
-                secondary={`${ep.request_count} call${ep.request_count === 1 ? '' : 's'}`}
-              />
-            </ListItemButton>
-          ))}
-          {endpoints.length === 0 && (
+          {endpointsLoading &&
+            Array.from({ length: 3 }).map((_, i) => (
+              <ListItemButton key={i} disabled>
+                <ListItemAvatar>
+                  <Skeleton variant="circular" width={40} height={40} />
+                </ListItemAvatar>
+                <ListItemText primary={<Skeleton width="70%" />} secondary={<Skeleton width="40%" />} />
+              </ListItemButton>
+            ))}
+          {!endpointsLoading &&
+            endpoints.map((ep) => (
+              <ListItemButton
+                key={ep.id}
+                selected={ep.id === endpointId}
+                onClick={() => navigate(`/endpoints/${ep.id}`)}
+              >
+                <ListItemAvatar>
+                  <Avatar sx={{ bgcolor: 'primary.light' }}>{(ep.name || ep.id)[0].toUpperCase()}</Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={ep.name || ep.id.slice(0, 8)}
+                  secondary={`${ep.request_count} call${ep.request_count === 1 ? '' : 's'}`}
+                />
+              </ListItemButton>
+            ))}
+          {!endpointsLoading && endpoints.length === 0 && (
             <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
               No endpoints yet — create one to get started.
             </Typography>

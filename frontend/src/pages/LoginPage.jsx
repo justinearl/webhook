@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { Navigate } from 'react-router-dom'
-import { Alert, Box, Paper, Stack, Typography } from '@mui/material'
+import { Alert, Box, CircularProgress, Paper, Stack, Typography } from '@mui/material'
 import WebhookIcon from '@mui/icons-material/Webhook'
 import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage() {
   const { user, loginWithGoogle } = useAuth()
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   if (user) return <Navigate to="/" replace />
 
@@ -35,17 +36,24 @@ export default function LoginPage() {
               {error}
             </Alert>
           )}
-          <GoogleLogin
-            onSuccess={async (credentialResponse) => {
-              try {
-                setError('')
-                await loginWithGoogle(credentialResponse.credential)
-              } catch (e) {
-                setError(e?.response?.data?.detail || 'Login failed, please try again.')
-              }
-            }}
-            onError={() => setError('Google sign-in failed.')}
-          />
+          {loading ? (
+            <CircularProgress size={32} />
+          ) : (
+            <GoogleLogin
+              onSuccess={async (credentialResponse) => {
+                try {
+                  setError('')
+                  setLoading(true)
+                  await loginWithGoogle(credentialResponse.credential)
+                } catch (e) {
+                  setError(e?.response?.data?.detail || 'Login failed, please try again.')
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              onError={() => setError('Google sign-in failed.')}
+            />
+          )}
         </Stack>
       </Paper>
     </Box>

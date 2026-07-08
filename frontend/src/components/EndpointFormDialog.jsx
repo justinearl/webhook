@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -25,10 +26,12 @@ const DEFAULTS = {
 export default function EndpointFormDialog({ open, onClose, onSubmit, initialValues, title }) {
   const [form, setForm] = useState(DEFAULTS)
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setError('')
+    setSubmitting(false)
     if (initialValues) {
       setForm({
         ...DEFAULTS,
@@ -42,7 +45,7 @@ export default function EndpointFormDialog({ open, onClose, onSubmit, initialVal
 
   const handleChange = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     let headers
     try {
       headers = JSON.parse(form.response_headers || '{}')
@@ -50,18 +53,26 @@ export default function EndpointFormDialog({ open, onClose, onSubmit, initialVal
       setError('Response headers must be valid JSON')
       return
     }
-    onSubmit({
-      name: form.name,
-      description: form.description,
-      response_status: Number(form.response_status) || 200,
-      response_content_type: form.response_content_type,
-      response_body: form.response_body,
-      response_headers: headers,
-    })
+    setError('')
+    setSubmitting(true)
+    try {
+      await onSubmit({
+        name: form.name,
+        description: form.description,
+        response_status: Number(form.response_status) || 200,
+        response_content_type: form.response_content_type,
+        response_body: form.response_body,
+        response_headers: headers,
+      })
+    } catch (e) {
+      setError(e?.response?.data?.detail || 'Something went wrong, please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={submitting ? undefined : onClose} fullWidth maxWidth="sm">
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
@@ -116,8 +127,15 @@ export default function EndpointFormDialog({ open, onClose, onSubmit, initialVal
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSubmit}>
+        <Button onClick={onClose} disabled={submitting}>
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={submitting}
+          startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : null}
+        >
           Save
         </Button>
       </DialogActions>

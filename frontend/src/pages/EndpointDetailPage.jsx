@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   IconButton,
   InputAdornment,
   Paper,
@@ -40,6 +41,7 @@ export default function EndpointDetailPage() {
   const { refresh, onDelete } = useOutletContext()
   const [endpoint, setEndpoint] = useState(null)
   const [requests, setRequests] = useState([])
+  const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [selectedRequestId, setSelectedRequestId] = useState(null)
@@ -48,14 +50,21 @@ export default function EndpointDetailPage() {
   const hookUrl = `${window.location.origin}/hook/${endpointId}`
 
   const load = useCallback(async () => {
-    const [ep, reqs] = await Promise.all([getEndpoint(endpointId), listRequests(endpointId)])
-    setEndpoint(ep)
-    setRequests(reqs)
+    setLoading(true)
+    try {
+      const [ep, reqs] = await Promise.all([getEndpoint(endpointId), listRequests(endpointId)])
+      setEndpoint(ep)
+      setRequests(reqs)
+    } finally {
+      setLoading(false)
+    }
   }, [endpointId])
 
   useEffect(() => {
+    // Clear stale data immediately so switching endpoints never shows the wrong one mid-fetch.
+    setEndpoint(null)
     load()
-  }, [load])
+  }, [endpointId, load])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(hookUrl)
@@ -70,7 +79,13 @@ export default function EndpointDetailPage() {
     setEditOpen(false)
   }
 
-  if (!endpoint) return null
+  if (!endpoint) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
 
   return (
     <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
@@ -122,8 +137,8 @@ export default function EndpointDetailPage() {
 
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
         <Typography variant="subtitle1">Requests ({requests.length})</Typography>
-        <IconButton onClick={load}>
-          <RefreshIcon />
+        <IconButton onClick={load} disabled={loading}>
+          {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
         </IconButton>
       </Stack>
 

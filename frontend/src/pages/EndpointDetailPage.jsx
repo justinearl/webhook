@@ -25,6 +25,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import { getEndpoint, listRequests, updateEndpoint } from '../api/endpoints'
 import EndpointFormDialog from '../components/EndpointFormDialog'
 import RequestDetailDialog from '../components/RequestDetailDialog'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const METHOD_COLORS = {
   GET: 'success',
@@ -40,6 +41,7 @@ export default function EndpointDetailPage() {
   const [endpoint, setEndpoint] = useState(null)
   const [requests, setRequests] = useState([])
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [selectedRequestId, setSelectedRequestId] = useState(null)
   const [copied, setCopied] = useState(false)
 
@@ -85,7 +87,7 @@ export default function EndpointDetailPage() {
           <Button startIcon={<EditIcon />} onClick={() => setEditOpen(true)}>
             Edit
           </Button>
-          <Button startIcon={<DeleteIcon />} color="error" onClick={() => onDelete(endpointId)}>
+          <Button startIcon={<DeleteIcon />} color="error" onClick={() => setDeleteConfirmOpen(true)}>
             Delete
           </Button>
         </Stack>
@@ -171,6 +173,16 @@ export default function EndpointDetailPage() {
         endpointId={endpointId}
         requestId={selectedRequestId}
         onClose={() => setSelectedRequestId(null)}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={() => onDelete(endpointId)}
+        title="Delete this endpoint?"
+        description="This permanently deletes the endpoint and every request it has recorded. This can't be undone."
+        confirmLabel="Delete"
+        confirmColor="error"
       />
     </Box>
   )

@@ -22,6 +22,7 @@ import WebhookIcon from '@mui/icons-material/Webhook'
 import { useAuth } from '../context/AuthContext'
 import { createEndpoint, deleteEndpoint, listEndpoints } from '../api/endpoints'
 import EndpointFormDialog from '../components/EndpointFormDialog'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const DRAWER_WIDTH = 300
 
@@ -31,6 +32,7 @@ export default function DashboardLayout() {
   const { endpointId } = useParams()
   const [endpoints, setEndpoints] = useState([])
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     const data = await listEndpoints()
@@ -74,7 +76,7 @@ export default function DashboardLayout() {
                 {user.name}
               </Typography>
               <Tooltip title="Log out">
-                <IconButton onClick={logout}>
+                <IconButton onClick={() => setLogoutConfirmOpen(true)}>
                   <LogoutIcon />
                 </IconButton>
               </Tooltip>
@@ -132,6 +134,16 @@ export default function DashboardLayout() {
         onClose={() => setDialogOpen(false)}
         onSubmit={handleCreate}
         title="New callback endpoint"
+      />
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={logout}
+        title="Log out?"
+        description="You'll need to sign in with Google again to access your endpoints."
+        confirmLabel="Log out"
+        confirmColor="error"
       />
     </Box>
   )

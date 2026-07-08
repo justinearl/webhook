@@ -46,6 +46,12 @@ export default function DashboardLayout() {
     refresh().finally(() => setEndpointsLoading(false))
   }, [refresh])
 
+  useEffect(() => {
+    if (!endpointsLoading && !endpointId && endpoints.length > 0) {
+      navigate(`/endpoints/${endpoints[0].id}`, { replace: true })
+    }
+  }, [endpointsLoading, endpointId, endpoints, navigate])
+
   const handleCreate = async (payload) => {
     const created = await createEndpoint(payload)
     await refresh()

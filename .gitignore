@@ -1,0 +1,7 @@
+.envrc
+.venv
+__pycache__/
+*.pyc
+webhook.db
+frontend/node_modules
+frontend/dist

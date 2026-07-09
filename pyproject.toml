@@ -9,4 +9,5 @@ dependencies = [
     "psycopg[binary]>=3.2.3",
     "google-auth>=2.35.0",
     "pyjwt>=2.9.0",
+    "redis>=5.2.0",
 ]

@@ -1,8 +1,13 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import models, schemas
 from ..db import get_db
+from ..events import publish
+
+logger = logging.getLogger("webhook.hooks")
 
 router = APIRouter(prefix="/hook", tags=["hooks"])
 
@@ -32,6 +37,14 @@ async def _handle(endpoint_id: str, extra_path: str, request: Request, db: Sessi
     )
     db.add(log)
     db.commit()
+
+    summary = schemas.RequestLogSummary.model_validate(log).model_dump(mode="json")
+    try:
+        await publish(f"endpoint-requests:{endpoint.id}", summary)
+    except Exception:
+        # The request is already saved -> a broken live-update push must never
+        # fail the response the caller (the webhook sender) is waiting on.
+        logger.exception("Failed to publish live update for endpoint %s", endpoint.id)
 
     return Response(
         content=endpoint.response_body,

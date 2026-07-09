@@ -1,10 +1,17 @@
+import json
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..db import get_db
+from ..events import subscribe
 from ..security import get_current_user
+
+logger = logging.getLogger("webhook.endpoints")
 
 router = APIRouter(prefix="/api/endpoints", tags=["endpoints"])
 
@@ -115,3 +122,33 @@ def get_request(
     if log is None or log.endpoint_id != endpoint_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
     return log
+
+
+@router.get("/{endpoint_id}/stream")
+async def stream_requests(
+    endpoint_id: str,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    _get_owned_endpoint(endpoint_id, db, user)
+
+    async def event_stream():
+        try:
+            async for event in subscribe(f"endpoint-requests:{endpoint_id}"):
+                if event is None:
+                    yield ": keep-alive\n\n"
+                else:
+                    yield f"data: {json.dumps(event)}\n\n"
+        except Exception:
+            logger.exception("SSE stream for endpoint %s failed", endpoint_id)
+            raise
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

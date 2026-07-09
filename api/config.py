@@ -16,7 +16,16 @@ def _resolve_database_url() -> str:
     return url
 
 
+def _resolve_redis_url() -> str | None:
+    url = os.environ.get("REDIS_URL", "")
+    if not url or "<" in url or url.strip().lower() == "dummy":
+        # No real Redis configured -> caller falls back to in-process pub/sub.
+        return None
+    return url
+
+
 DATABASE_URL = _resolve_database_url()
+REDIS_URL = _resolve_redis_url()
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 JWT_SECRET = os.environ.get("JWT_SECRET") or secrets.token_hex(32)
 JWT_ALGORITHM = "HS256"

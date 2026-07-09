@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.db import Base, engine
+from api.events import close_redis
 from api.routers import auth, endpoints, hooks
 
 
@@ -13,6 +14,7 @@ from api.routers import auth, endpoints, hooks
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     yield
+    await close_redis()
 
 
 app = FastAPI(lifespan=lifespan)

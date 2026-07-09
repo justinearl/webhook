@@ -22,11 +22,15 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import { getEndpoint, listRequests, updateEndpoint } from '../api/endpoints'
+import { streamEndpointRequests } from '../api/stream'
 import EndpointFormDialog from '../components/EndpointFormDialog'
 import RequestDetailDialog from '../components/RequestDetailDialog'
 import ConfirmDialog from '../components/ConfirmDialog'
+
+const STREAM_RETRY_MS = 2000
 
 const METHOD_COLORS = {
   GET: 'success',
@@ -46,6 +50,7 @@ export default function EndpointDetailPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [selectedRequestId, setSelectedRequestId] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [live, setLive] = useState(false)
 
   const hookUrl = `${window.location.origin}/hook/${endpointId}`
 
@@ -65,6 +70,39 @@ export default function EndpointDetailPage() {
     setEndpoint(null)
     load()
   }, [endpointId, load])
+
+  useEffect(() => {
+    let stopped = false
+    let controller
+
+    async function connect() {
+      while (!stopped) {
+        controller = new AbortController()
+        setLive(false)
+        try {
+          await streamEndpointRequests(endpointId, {
+            signal: controller.signal,
+            onOpen: () => setLive(true),
+            onEvent: (event) => {
+              setRequests((prev) => (prev.some((r) => r.id === event.id) ? prev : [event, ...prev]))
+              refresh()
+            },
+          })
+        } catch {
+          // Connection dropped (network hiccup, proxy timeout, server restart) -> retry below.
+        }
+        setLive(false)
+        if (stopped) break
+        await new Promise((resolve) => setTimeout(resolve, STREAM_RETRY_MS))
+      }
+    }
+
+    connect()
+    return () => {
+      stopped = true
+      controller?.abort()
+    }
+  }, [endpointId, refresh])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(hookUrl)
@@ -136,7 +174,18 @@ export default function EndpointDetailPage() {
       </Paper>
 
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-        <Typography variant="subtitle1">Requests ({requests.length})</Typography>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="subtitle1">Requests ({requests.length})</Typography>
+          {live && (
+            <Chip
+              size="small"
+              color="success"
+              variant="outlined"
+              label="Live"
+              icon={<FiberManualRecordIcon sx={{ fontSize: '10px !important' }} />}
+            />
+          )}
+        </Stack>
         <IconButton onClick={load} disabled={loading}>
           {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
         </IconButton>

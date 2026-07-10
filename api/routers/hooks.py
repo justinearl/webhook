@@ -6,12 +6,25 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..db import get_db
 from ..events import endpoint_requests_channel, publish
+from ..rate_limit import check_rate_limit
 
 logger = logging.getLogger("webhook.hooks")
 
 router = APIRouter(prefix="/hook", tags=["hooks"])
 
 HOP_BY_HOP_HEADERS = {"host", "content-length", "connection"}
+
+
+async def enforce_rate_limit(request: Request) -> None:
+    client_ip = request.client.host if request.client else "unknown"
+    retry_after = await check_rate_limit(client_ip)
+    if retry_after is not None:
+        logger.warning("Rate limit exceeded for hook caller", extra={"client_ip": client_ip})
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests, slow down.",
+            headers={"Retry-After": str(retry_after)},
+        )
 
 
 async def _handle(endpoint_id: str, extra_path: str, request: Request, db: Session) -> Response:
@@ -82,6 +95,7 @@ async def _handle(endpoint_id: str, extra_path: str, request: Request, db: Sessi
 @router.api_route(
     "/{endpoint_id}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    dependencies=[Depends(enforce_rate_limit)],
 )
 async def receive_root(endpoint_id: str, request: Request, db: Session = Depends(get_db)):
     return await _handle(endpoint_id, "", request, db)
@@ -90,6 +104,7 @@ async def receive_root(endpoint_id: str, request: Request, db: Session = Depends
 @router.api_route(
     "/{endpoint_id}/{extra_path:path}",
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    dependencies=[Depends(enforce_rate_limit)],
 )
 async def receive_sub(endpoint_id: str, extra_path: str, request: Request, db: Session = Depends(get_db)):
     return await _handle(endpoint_id, extra_path, request, db)

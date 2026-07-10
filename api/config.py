@@ -56,3 +56,8 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 JWT_SECRET = os.environ.get("JWT_SECRET") or secrets.token_hex(32)
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+# The /hook/{id} receiver is unauthenticated by design -> rate-limited per
+# caller IP to protect it from abuse. Optional, sane default, no placeholder
+# convention needed since it's not a secret/connection string.
+HOOK_RATE_LIMIT_PER_MINUTE = int(os.environ.get("HOOK_RATE_LIMIT_PER_MINUTE", "60"))

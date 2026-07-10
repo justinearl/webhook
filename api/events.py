@@ -21,7 +21,7 @@ def endpoint_requests_channel(endpoint_id: str) -> str:
     return f"endpoint-requests:{endpoint_id}"
 
 
-def _get_redis() -> redis.Redis | None:
+def get_redis_client() -> redis.Redis | None:
     global _redis_client
     if REDIS_URL is None:
         return None
@@ -38,7 +38,7 @@ async def close_redis() -> None:
 
 
 async def publish(channel: str, data: dict) -> None:
-    client = _get_redis()
+    client = get_redis_client()
     if client is None:
         # Single-process fallback: fan out directly to local subscriber queues.
         for queue in list(_memory_subscribers.get(channel, [])):
@@ -54,7 +54,7 @@ async def subscribe(channel: str):
     can emit a keep-alive to stop proxies/load balancers from closing the
     connection during quiet periods.
     """
-    client = _get_redis()
+    client = get_redis_client()
 
     if client is None:
         queue: asyncio.Queue = asyncio.Queue()

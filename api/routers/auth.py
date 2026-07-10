@@ -1,9 +1,13 @@
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..db import get_db
 from ..security import create_access_token, get_current_user, verify_google_credential
+
+logger = logging.getLogger("webhook.auth")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -22,7 +26,8 @@ def login(payload: schemas.GoogleLoginRequest, db: Session = Depends(get_db)):
         # Fall back to matching by email in case the account already existed.
         user = db.query(models.User).filter(models.User.email == email).first()
 
-    if user is None:
+    is_new_user = user is None
+    if is_new_user:
         user = models.User(email=email, name=name, picture=picture, google_sub=google_sub)
         db.add(user)
     else:
@@ -32,6 +37,11 @@ def login(payload: schemas.GoogleLoginRequest, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(user)
+
+    logger.info(
+        "New user signed up" if is_new_user else "User logged in",
+        extra={"user_id": user.id, "email": user.email, "is_new_user": is_new_user},
+    )
 
     token = create_access_token(user.id)
     return schemas.LoginResponse(access_token=token, user=schemas.UserOut.model_validate(user))

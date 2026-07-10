@@ -42,6 +42,10 @@ def create_endpoint(
     db.add(endpoint)
     db.commit()
     db.refresh(endpoint)
+    logger.info(
+        "Endpoint created",
+        extra={"endpoint_id": endpoint.id, "owner_id": user.id, "endpoint_name": endpoint.name},
+    )
     return _to_out(endpoint, db)
 
 
@@ -77,10 +81,15 @@ def update_endpoint(
     user: models.User = Depends(get_current_user),
 ):
     endpoint = _get_owned_endpoint(endpoint_id, db, user)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changed_fields = payload.model_dump(exclude_unset=True)
+    for field, value in changed_fields.items():
         setattr(endpoint, field, value)
     db.commit()
     db.refresh(endpoint)
+    logger.info(
+        "Endpoint updated",
+        extra={"endpoint_id": endpoint.id, "owner_id": user.id, "changed_fields": list(changed_fields)},
+    )
     return _to_out(endpoint, db)
 
 
@@ -93,6 +102,7 @@ def delete_endpoint(
     endpoint = _get_owned_endpoint(endpoint_id, db, user)
     db.delete(endpoint)
     db.commit()
+    logger.info("Endpoint deleted", extra={"endpoint_id": endpoint_id, "owner_id": user.id})
 
 
 @router.get("/{endpoint_id}/requests", response_model=list[schemas.RequestLogSummary])
@@ -131,8 +141,10 @@ async def stream_requests(
     user: models.User = Depends(get_current_user),
 ):
     _get_owned_endpoint(endpoint_id, db, user)
+    log_context = {"endpoint_id": endpoint_id, "user_id": user.id}
 
     async def event_stream():
+        logger.info("SSE stream opened", extra=log_context)
         try:
             async for event in subscribe(endpoint_requests_channel(endpoint_id)):
                 if event is None:
@@ -140,8 +152,10 @@ async def stream_requests(
                 else:
                     yield f"data: {json.dumps(event)}\n\n"
         except Exception:
-            logger.exception("SSE stream for endpoint %s failed", endpoint_id)
+            logger.exception("SSE stream failed", extra=log_context)
             raise
+        finally:
+            logger.info("SSE stream closed", extra=log_context)
 
     return StreamingResponse(
         event_stream(),

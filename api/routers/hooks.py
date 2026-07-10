@@ -17,6 +17,14 @@ HOP_BY_HOP_HEADERS = {"host", "content-length", "connection"}
 async def _handle(endpoint_id: str, extra_path: str, request: Request, db: Session) -> Response:
     endpoint = db.get(models.Endpoint, endpoint_id)
     if endpoint is None:
+        logger.warning(
+            "Hook call to unknown endpoint",
+            extra={
+                "endpoint_id": endpoint_id,
+                "method": request.method,
+                "client_ip": request.client.host if request.client else "",
+            },
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown callback endpoint")
 
     body_bytes = await request.body()
@@ -38,13 +46,30 @@ async def _handle(endpoint_id: str, extra_path: str, request: Request, db: Sessi
     db.add(log)
     db.commit()
 
+    logger.info(
+        "Recorded incoming request",
+        extra={
+            "endpoint_id": endpoint.id,
+            "owner_id": endpoint.owner_id,
+            "request_log_id": log.id,
+            "method": log.method,
+            "path": log.path,
+            "client_ip": log.client_ip,
+            "content_type": log.content_type,
+            "body_size": len(body_bytes),
+        },
+    )
+
     summary = schemas.RequestLogSummary.model_validate(log).model_dump(mode="json")
     try:
         await publish(endpoint_requests_channel(endpoint.id), summary)
     except Exception:
         # The request is already saved -> a broken live-update push must never
         # fail the response the caller (the webhook sender) is waiting on.
-        logger.exception("Failed to publish live update for endpoint %s", endpoint.id)
+        logger.exception(
+            "Failed to publish live update",
+            extra={"endpoint_id": endpoint.id, "request_log_id": log.id},
+        )
 
     return Response(
         content=endpoint.response_body,

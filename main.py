@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 import logfire
@@ -24,6 +25,11 @@ else:
     # No real Logfire project configured (e.g. local dev) -> don't try to export over the network.
     logfire.configure(send_to_logfire=False)
 logfire.instrument_fastapi(app)
+logging.basicConfig(level=logging.INFO, handlers=[logfire.LogfireLoggingHandler()])
+# logfire.instrument_fastapi already logs a request-level entry for every
+# call (and exports it to the dashboard); uvicorn's own access log would
+# otherwise print a second, unstructured line for the same request.
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 logfire.info("Application started")
 
 app.include_router(auth.router)

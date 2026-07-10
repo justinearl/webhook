@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..db import get_db
-from ..events import publish
+from ..events import endpoint_requests_channel, publish
 
 logger = logging.getLogger("webhook.hooks")
 
@@ -40,7 +40,7 @@ async def _handle(endpoint_id: str, extra_path: str, request: Request, db: Sessi
 
     summary = schemas.RequestLogSummary.model_validate(log).model_dump(mode="json")
     try:
-        await publish(f"endpoint-requests:{endpoint.id}", summary)
+        await publish(endpoint_requests_channel(endpoint.id), summary)
     except Exception:
         # The request is already saved -> a broken live-update push must never
         # fail the response the caller (the webhook sender) is waiting on.

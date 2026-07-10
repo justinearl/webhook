@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..db import get_db
-from ..events import subscribe
+from ..events import endpoint_requests_channel, subscribe
 from ..security import get_current_user
 
 logger = logging.getLogger("webhook.endpoints")
@@ -134,7 +134,7 @@ async def stream_requests(
 
     async def event_stream():
         try:
-            async for event in subscribe(f"endpoint-requests:{endpoint_id}"):
+            async for event in subscribe(endpoint_requests_channel(endpoint_id)):
                 if event is None:
                     yield ": keep-alive\n\n"
                 else:

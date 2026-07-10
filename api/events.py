@@ -12,6 +12,15 @@ _redis_client: redis.Redis | None = None
 _memory_subscribers: dict[str, set[asyncio.Queue]] = defaultdict(set)
 
 
+def endpoint_requests_channel(endpoint_id: str) -> str:
+    """Channel name for live-updates on a given endpoint's requests.
+
+    Shared by the publisher (hooks.py) and subscriber (endpoints.py stream
+    route)
+    """
+    return f"endpoint-requests:{endpoint_id}"
+
+
 def _get_redis() -> redis.Redis | None:
     global _redis_client
     if REDIS_URL is None:

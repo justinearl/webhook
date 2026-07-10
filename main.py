@@ -1,10 +1,10 @@
-import os
 from contextlib import asynccontextmanager
 
 import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.config import LOGFIRE_TOKEN
 from api.db import Base, engine
 from api.events import close_redis
 from api.routers import auth, endpoints, hooks
@@ -27,7 +27,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logfire.configure(token=os.environ["LOGFIRE_TOKEN"])
+if LOGFIRE_TOKEN is not None:
+    logfire.configure(token=LOGFIRE_TOKEN)
+else:
+    # No real Logfire project configured (e.g. local dev) -> don't try to export over the network.
+    logfire.configure(send_to_logfire=False)
 logfire.instrument_fastapi(app)
 logfire.info("Application started")
 

@@ -19,6 +19,7 @@ import {
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import LogoutIcon from '@mui/icons-material/Logout'
+import MenuIcon from '@mui/icons-material/Menu'
 import WebhookIcon from '@mui/icons-material/Webhook'
 import { useAuth } from '../context/AuthContext'
 import { createEndpoint, deleteEndpoint, listEndpoints } from '../api/endpoints'
@@ -35,6 +36,7 @@ export default function DashboardLayout() {
   const [endpointsLoading, setEndpointsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     const data = await listEndpoints()
@@ -67,10 +69,66 @@ export default function DashboardLayout() {
     }
   }
 
+  const handleSelectEndpoint = (id) => {
+    navigate(`/endpoints/${id}`)
+    setMobileOpen(false)
+  }
+
+  const drawerContent = (
+    <>
+      <Toolbar />
+      <Box sx={{ p: 2 }}>
+        <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
+          New endpoint
+        </Button>
+      </Box>
+      <Divider />
+      <List sx={{ overflowY: 'auto' }}>
+        {endpointsLoading &&
+          Array.from({ length: 3 }).map((_, i) => (
+            <ListItemButton key={i} disabled>
+              <ListItemAvatar>
+                <Skeleton variant="circular" width={40} height={40} />
+              </ListItemAvatar>
+              <ListItemText primary={<Skeleton width="70%" />} secondary={<Skeleton width="40%" />} />
+            </ListItemButton>
+          ))}
+        {!endpointsLoading &&
+          endpoints.map((ep) => (
+            <ListItemButton
+              key={ep.id}
+              selected={ep.id === endpointId}
+              onClick={() => handleSelectEndpoint(ep.id)}
+            >
+              <ListItemAvatar>
+                <Avatar sx={{ bgcolor: 'primary.light' }}>{(ep.name || ep.id)[0].toUpperCase()}</Avatar>
+              </ListItemAvatar>
+              <ListItemText
+                primary={ep.name || ep.id.slice(0, 8)}
+                secondary={`${ep.request_count} call${ep.request_count === 1 ? '' : 's'}`}
+              />
+            </ListItemButton>
+          ))}
+        {!endpointsLoading && endpoints.length === 0 && (
+          <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
+            No endpoints yet — create one to get started.
+          </Typography>
+        )}
+      </List>
+    </>
+  )
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }} color="inherit" elevation={0}>
         <Toolbar sx={{ gap: 1 }}>
+          <IconButton
+            edge="start"
+            onClick={() => setMobileOpen(true)}
+            sx={{ display: { xs: 'inline-flex', sm: 'none' } }}
+          >
+            <MenuIcon />
+          </IconButton>
           <WebhookIcon color="primary" />
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Webhook Catcher
@@ -93,54 +151,30 @@ export default function DashboardLayout() {
         </Toolbar>
       </AppBar>
 
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: DRAWER_WIDTH, boxSizing: 'border-box' },
-        }}
-      >
-        <Toolbar />
-        <Box sx={{ p: 2 }}>
-          <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
-            New endpoint
-          </Button>
-        </Box>
-        <Divider />
-        <List sx={{ overflowY: 'auto' }}>
-          {endpointsLoading &&
-            Array.from({ length: 3 }).map((_, i) => (
-              <ListItemButton key={i} disabled>
-                <ListItemAvatar>
-                  <Skeleton variant="circular" width={40} height={40} />
-                </ListItemAvatar>
-                <ListItemText primary={<Skeleton width="70%" />} secondary={<Skeleton width="40%" />} />
-              </ListItemButton>
-            ))}
-          {!endpointsLoading &&
-            endpoints.map((ep) => (
-              <ListItemButton
-                key={ep.id}
-                selected={ep.id === endpointId}
-                onClick={() => navigate(`/endpoints/${ep.id}`)}
-              >
-                <ListItemAvatar>
-                  <Avatar sx={{ bgcolor: 'primary.light' }}>{(ep.name || ep.id)[0].toUpperCase()}</Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={ep.name || ep.id.slice(0, 8)}
-                  secondary={`${ep.request_count} call${ep.request_count === 1 ? '' : 's'}`}
-                />
-              </ListItemButton>
-            ))}
-          {!endpointsLoading && endpoints.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
-              No endpoints yet — create one to get started.
-            </Typography>
-          )}
-        </List>
-      </Drawer>
+      <Box component="nav" sx={{ width: { sm: DRAWER_WIDTH }, flexShrink: { sm: 0 } }}>
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          ModalProps={{ keepMounted: true }}
+          sx={{
+            display: { xs: 'block', sm: 'none' },
+            [`& .MuiDrawer-paper`]: { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', sm: 'block' },
+            [`& .MuiDrawer-paper`]: { width: DRAWER_WIDTH, boxSizing: 'border-box' },
+          }}
+          open
+        >
+          {drawerContent}
+        </Drawer>
+      </Box>
 
       <Box component="main" sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}>
         <Toolbar />

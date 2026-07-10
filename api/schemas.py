@@ -78,3 +78,8 @@ class RequestLogSummary(BaseModel):
     path: str
     client_ip: str
     created_at: datetime
+
+
+class RequestLogPage(BaseModel):
+    items: list[RequestLogSummary]
+    has_more: bool

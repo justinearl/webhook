@@ -1,7 +1,8 @@
 import json
 import logging
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -105,19 +106,22 @@ def delete_endpoint(
     logger.info("Endpoint deleted", extra={"endpoint_id": endpoint_id, "owner_id": user.id})
 
 
-@router.get("/{endpoint_id}/requests", response_model=list[schemas.RequestLogSummary])
+@router.get("/{endpoint_id}/requests", response_model=schemas.RequestLogPage)
 def list_requests(
     endpoint_id: str,
+    limit: int = Query(25, ge=1, le=200),
+    before: datetime | None = Query(None, description="Only return requests older than this timestamp"),
     db: Session = Depends(get_db),
     user: models.User = Depends(get_current_user),
 ):
     _get_owned_endpoint(endpoint_id, db, user)
-    return (
-        db.query(models.RequestLog)
-        .filter(models.RequestLog.endpoint_id == endpoint_id)
-        .order_by(models.RequestLog.created_at.desc())
-        .all()
-    )
+    query = db.query(models.RequestLog).filter(models.RequestLog.endpoint_id == endpoint_id)
+    if before is not None:
+        query = query.filter(models.RequestLog.created_at < before)
+
+    rows = query.order_by(models.RequestLog.created_at.desc()).limit(limit + 1).all()
+    has_more = len(rows) > limit
+    return schemas.RequestLogPage(items=rows[:limit], has_more=has_more)
 
 
 @router.get("/{endpoint_id}/requests/{request_id}", response_model=schemas.RequestLogOut)

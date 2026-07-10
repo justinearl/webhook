@@ -5,6 +5,7 @@ export const createEndpoint = (data) => api.post('/endpoints', data).then((r) =>
 export const getEndpoint = (id) => api.get(`/endpoints/${id}`).then((r) => r.data)
 export const updateEndpoint = (id, data) => api.patch(`/endpoints/${id}`, data).then((r) => r.data)
 export const deleteEndpoint = (id) => api.delete(`/endpoints/${id}`)
-export const listRequests = (id) => api.get(`/endpoints/${id}/requests`).then((r) => r.data)
+export const listRequests = (id, { limit = 25, before } = {}) =>
+  api.get(`/endpoints/${id}/requests`, { params: { limit, before } }).then((r) => r.data)
 export const getRequest = (id, requestId) =>
   api.get(`/endpoints/${id}/requests/${requestId}`).then((r) => r.data)

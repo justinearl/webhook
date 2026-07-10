@@ -31,6 +31,7 @@ import RequestDetailDialog from '../components/RequestDetailDialog'
 import ConfirmDialog from '../components/ConfirmDialog'
 
 const STREAM_RETRY_MS = 2000
+const PAGE_SIZE = 25
 
 const METHOD_COLORS = {
   GET: 'success',
@@ -46,6 +47,8 @@ export default function EndpointDetailPage() {
   const [endpoint, setEndpoint] = useState(null)
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [selectedRequestId, setSelectedRequestId] = useState(null)
@@ -57,13 +60,30 @@ export default function EndpointDetailPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [ep, reqs] = await Promise.all([getEndpoint(endpointId), listRequests(endpointId)])
+      const [ep, page] = await Promise.all([
+        getEndpoint(endpointId),
+        listRequests(endpointId, { limit: PAGE_SIZE }),
+      ])
       setEndpoint(ep)
-      setRequests(reqs)
+      setRequests(page.items)
+      setHasMore(page.has_more)
     } finally {
       setLoading(false)
     }
   }, [endpointId])
+
+  const loadMore = async () => {
+    if (requests.length === 0) return
+    setLoadingMore(true)
+    try {
+      const oldest = requests[requests.length - 1]
+      const page = await listRequests(endpointId, { limit: PAGE_SIZE, before: oldest.created_at })
+      setRequests((prev) => [...prev, ...page.items])
+      setHasMore(page.has_more)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   useEffect(() => {
     // Clear stale data immediately so switching endpoints never shows the wrong one mid-fetch.
@@ -175,7 +195,7 @@ export default function EndpointDetailPage() {
 
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
         <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="subtitle1">Requests ({requests.length})</Typography>
+          <Typography variant="subtitle1">Requests ({endpoint.request_count})</Typography>
           {live && (
             <Chip
               size="small"
@@ -224,6 +244,18 @@ export default function EndpointDetailPage() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {hasMore && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <Button
+            onClick={loadMore}
+            disabled={loadingMore}
+            startIcon={loadingMore ? <CircularProgress size={16} /> : null}
+          >
+            Load more
+          </Button>
+        </Box>
+      )}
 
       <EndpointFormDialog
         open={editOpen}

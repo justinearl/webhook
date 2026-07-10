@@ -28,6 +28,8 @@ jobs:
           npm ci
           npm run build
           cd ..
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
 
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7

@@ -53,6 +53,32 @@ class EndpointOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     request_count: int = 0
+    share_token: str | None = None
+
+
+class ShareOut(BaseModel):
+    """The public token for an endpoint's read-only share link."""
+
+    token: str
+
+
+class SharedEndpointOut(BaseModel):
+    """Public view of a shared endpoint.
+
+    Deliberately narrower than EndpointOut: no owner, and none of the
+    configured response body/headers, which are the endpoint's own settings
+    rather than something a read-only viewer needs.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    description: str
+    response_status: int
+    response_content_type: str
+    created_at: datetime
+    request_count: int = 0
 
 
 class RequestLogOut(BaseModel):

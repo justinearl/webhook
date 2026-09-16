@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from api.config import LOGFIRE_TOKEN
 from api.db import Base, engine
 from api.events import close_redis
-from api.routers import auth, endpoints, hooks
+from api.routers import auth, endpoints, hooks, shared
 
 
 @asynccontextmanager
@@ -35,6 +35,7 @@ logfire.info("Application started")
 app.include_router(auth.router)
 app.include_router(endpoints.router)
 app.include_router(hooks.router)
+app.include_router(shared.router)
 
 
 @app.get("/api")

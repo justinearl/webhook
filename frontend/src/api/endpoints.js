@@ -9,3 +9,5 @@ export const listRequests = (id, { limit = 25, before } = {}) =>
   api.get(`/endpoints/${id}/requests`, { params: { limit, before } }).then((r) => r.data)
 export const getRequest = (id, requestId) =>
   api.get(`/endpoints/${id}/requests/${requestId}`).then((r) => r.data)
+export const createShareLink = (id) => api.post(`/endpoints/${id}/share`).then((r) => r.data)
+export const revokeShareLink = (id) => api.delete(`/endpoints/${id}/share`)

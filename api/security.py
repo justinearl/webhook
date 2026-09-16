@@ -47,3 +47,19 @@ def get_current_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+
+def get_owned_endpoint(
+    endpoint_id: str,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+) -> models.Endpoint:
+    """Resolve a path's {endpoint_id} to an endpoint the caller owns.
+
+    Someone else's endpoint is reported as 404, not 403, so the API never
+    confirms that an id exists to a user who has no business knowing.
+    """
+    endpoint = db.get(models.Endpoint, endpoint_id)
+    if endpoint is None or endpoint.owner_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Endpoint not found")
+    return endpoint

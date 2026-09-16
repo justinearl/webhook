@@ -1,27 +1,17 @@
-import json
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import models, request_views, schemas
 from ..db import get_db
-from ..events import endpoint_requests_channel, subscribe
-from ..security import get_current_user
+from ..security import get_current_user, get_owned_endpoint
 
 logger = logging.getLogger("webhook.endpoints")
 
 router = APIRouter(prefix="/api/endpoints", tags=["endpoints"])
-
-
-def _get_owned_endpoint(endpoint_id: str, db: Session, user: models.User) -> models.Endpoint:
-    endpoint = db.get(models.Endpoint, endpoint_id)
-    if endpoint is None or endpoint.owner_id != user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Endpoint not found")
-    return endpoint
 
 
 def _to_out(endpoint: models.Endpoint, db: Session) -> schemas.EndpointOut:
@@ -30,6 +20,7 @@ def _to_out(endpoint: models.Endpoint, db: Session) -> schemas.EndpointOut:
     ).scalar()
     data = schemas.EndpointOut.model_validate(endpoint)
     data.request_count = count or 0
+    data.share_token = endpoint.share.token if endpoint.share else None
     return data
 
 
@@ -66,22 +57,18 @@ def list_endpoints(
 
 @router.get("/{endpoint_id}", response_model=schemas.EndpointOut)
 def get_endpoint(
-    endpoint_id: str,
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
 ):
-    endpoint = _get_owned_endpoint(endpoint_id, db, user)
     return _to_out(endpoint, db)
 
 
 @router.patch("/{endpoint_id}", response_model=schemas.EndpointOut)
 def update_endpoint(
-    endpoint_id: str,
     payload: schemas.EndpointUpdate,
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
 ):
-    endpoint = _get_owned_endpoint(endpoint_id, db, user)
     changed_fields = payload.model_dump(exclude_unset=True)
     for field, value in changed_fields.items():
         setattr(endpoint, field, value)
@@ -89,84 +76,79 @@ def update_endpoint(
     db.refresh(endpoint)
     logger.info(
         "Endpoint updated",
-        extra={"endpoint_id": endpoint.id, "owner_id": user.id, "changed_fields": list(changed_fields)},
+        extra={
+            "endpoint_id": endpoint.id,
+            "owner_id": endpoint.owner_id,
+            "changed_fields": list(changed_fields),
+        },
     )
     return _to_out(endpoint, db)
 
 
 @router.delete("/{endpoint_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_endpoint(
-    endpoint_id: str,
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
 ):
-    endpoint = _get_owned_endpoint(endpoint_id, db, user)
+    endpoint_id, owner_id = endpoint.id, endpoint.owner_id
     db.delete(endpoint)
     db.commit()
-    logger.info("Endpoint deleted", extra={"endpoint_id": endpoint_id, "owner_id": user.id})
+    logger.info("Endpoint deleted", extra={"endpoint_id": endpoint_id, "owner_id": owner_id})
+
+
+@router.post("/{endpoint_id}/share", response_model=schemas.ShareOut)
+def create_share_link(
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
+    db: Session = Depends(get_db),
+):
+    """Enable public read-only sharing. Idempotent: returns the existing link if there is one."""
+    if endpoint.share is None:
+        endpoint.share = models.EndpointShare()
+        db.commit()
+        db.refresh(endpoint)
+        logger.info(
+            "Share link created",
+            extra={"endpoint_id": endpoint.id, "owner_id": endpoint.owner_id},
+        )
+    return schemas.ShareOut(token=endpoint.share.token)
+
+
+@router.delete("/{endpoint_id}/share", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_share_link(
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
+    db: Session = Depends(get_db),
+):
+    """Revoke the share link. The old URL stops working immediately."""
+    if endpoint.share is not None:
+        db.delete(endpoint.share)
+        db.commit()
+        logger.info(
+            "Share link revoked",
+            extra={"endpoint_id": endpoint.id, "owner_id": endpoint.owner_id},
+        )
 
 
 @router.get("/{endpoint_id}/requests", response_model=schemas.RequestLogPage)
 def list_requests(
-    endpoint_id: str,
     limit: int = Query(25, ge=1, le=200),
     before: datetime | None = Query(None, description="Only return requests older than this timestamp"),
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
 ):
-    _get_owned_endpoint(endpoint_id, db, user)
-    query = db.query(models.RequestLog).filter(models.RequestLog.endpoint_id == endpoint_id)
-    if before is not None:
-        query = query.filter(models.RequestLog.created_at < before)
-
-    rows = query.order_by(models.RequestLog.created_at.desc()).limit(limit + 1).all()
-    has_more = len(rows) > limit
-    return schemas.RequestLogPage(items=rows[:limit], has_more=has_more)
+    return request_views.request_page(db, endpoint.id, limit, before)
 
 
 @router.get("/{endpoint_id}/requests/{request_id}", response_model=schemas.RequestLogOut)
 def get_request(
-    endpoint_id: str,
     request_id: str,
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
     db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
 ):
-    _get_owned_endpoint(endpoint_id, db, user)
-    log = db.get(models.RequestLog, request_id)
-    if log is None or log.endpoint_id != endpoint_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
-    return log
+    return request_views.request_detail(db, endpoint.id, request_id)
 
 
 @router.get("/{endpoint_id}/stream")
-async def stream_requests(
-    endpoint_id: str,
-    db: Session = Depends(get_db),
-    user: models.User = Depends(get_current_user),
-):
-    _get_owned_endpoint(endpoint_id, db, user)
-    log_context = {"endpoint_id": endpoint_id, "user_id": user.id}
-
-    async def event_stream():
-        logger.info("SSE stream opened", extra=log_context)
-        try:
-            async for event in subscribe(endpoint_requests_channel(endpoint_id)):
-                if event is None:
-                    yield ": keep-alive\n\n"
-                else:
-                    yield f"data: {json.dumps(event)}\n\n"
-        except Exception:
-            logger.exception("SSE stream failed", extra=log_context)
-            raise
-        finally:
-            logger.info("SSE stream closed", extra=log_context)
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+async def stream_requests(endpoint: models.Endpoint = Depends(get_owned_endpoint)):
+    return request_views.request_stream(
+        endpoint.id, {"endpoint_id": endpoint.id, "user_id": endpoint.owner_id}
     )

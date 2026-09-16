@@ -7,6 +7,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const DashboardLayout = lazy(() => import('./layouts/DashboardLayout'))
 const EmptyStatePage = lazy(() => import('./pages/EmptyStatePage'))
 const EndpointDetailPage = lazy(() => import('./pages/EndpointDetailPage'))
+const SharedEndpointPage = lazy(() => import('./pages/SharedEndpointPage'))
 
 function RouteFallback() {
   return (
@@ -21,6 +22,8 @@ export default function App() {
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* Public: the share token is the credential, so this sits outside ProtectedRoute. */}
+        <Route path="/shared/:token" element={<SharedEndpointPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<DashboardLayout />}>
             <Route index element={<EmptyStatePage />} />

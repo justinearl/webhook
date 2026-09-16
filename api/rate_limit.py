@@ -31,14 +31,21 @@ async def _increment(key: str, window_seconds: int) -> tuple[int, int]:
     return count, max(ttl, 0)
 
 
-async def check_rate_limit(identifier: str, limit: int = HOOK_RATE_LIMIT_PER_MINUTE) -> int | None:
+async def check_rate_limit(
+    identifier: str, limit: int = HOOK_RATE_LIMIT_PER_MINUTE, scope: str = "hook"
+) -> int | None:
     """Fixed-window rate limit check.
 
     Returns None if `identifier` is within `limit` calls for the current
     window, otherwise the number of seconds until the window resets.
+
+    `scope` keeps unrelated unauthenticated surfaces in separate buckets, so
+    e.g. viewing a share link never eats into the caller's hook allowance.
     """
     bucket = int(time.time() // WINDOW_SECONDS)
-    count, retry_after = await _increment(f"ratelimit:hook:{identifier}:{bucket}", WINDOW_SECONDS)
+    count, retry_after = await _increment(
+        f"ratelimit:{scope}:{identifier}:{bucket}", WINDOW_SECONDS
+    )
     if count > limit:
         return retry_after or WINDOW_SECONDS
     return None

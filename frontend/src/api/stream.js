@@ -1,11 +1,7 @@
 // Native fetch + ReadableStream instead of EventSource: EventSource can't send
 // custom headers, and this app authenticates with a Bearer token, not cookies.
-export async function streamEndpointRequests(endpointId, { onEvent, onOpen, signal }) {
-  const token = localStorage.getItem('webhook_token')
-  const response = await fetch(`/api/endpoints/${endpointId}/stream`, {
-    headers: { Authorization: `Bearer ${token}` },
-    signal,
-  })
+async function streamSSE(url, { onEvent, onOpen, signal, headers = {} }) {
+  const response = await fetch(url, { headers, signal })
 
   if (!response.ok || !response.body) {
     throw new Error(`Stream request failed with status ${response.status}`)
@@ -34,4 +30,17 @@ export async function streamEndpointRequests(endpointId, { onEvent, onOpen, sign
       }
     }
   }
+}
+
+export function streamEndpointRequests(endpointId, options) {
+  const token = localStorage.getItem('webhook_token')
+  return streamSSE(`/api/endpoints/${endpointId}/stream`, {
+    ...options,
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
+
+// Share links are public -> no auth header, same event shape.
+export function streamSharedRequests(shareToken, options) {
+  return streamSSE(`/api/shared/${encodeURIComponent(shareToken)}/stream`, options)
 }

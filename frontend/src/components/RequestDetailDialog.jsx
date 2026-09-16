@@ -13,9 +13,10 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
-import { getRequest } from '../api/endpoints'
 
-export default function RequestDetailDialog({ endpointId, requestId, onClose }) {
+/** `fetchDetail(requestId)` is injected so this works for both the owner's
+ *  endpoints and a public share link. It must be referentially stable. */
+export default function RequestDetailDialog({ requestId, fetchDetail, onClose }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -23,7 +24,7 @@ export default function RequestDetailDialog({ endpointId, requestId, onClose }) 
     if (requestId) {
       setDetail(null)
       setLoading(true)
-      getRequest(endpointId, requestId).then((data) => {
+      fetchDetail(requestId).then((data) => {
         setDetail(data)
         setLoading(false)
       })
@@ -31,7 +32,7 @@ export default function RequestDetailDialog({ endpointId, requestId, onClose }) 
       setDetail(null)
       setLoading(false)
     }
-  }, [endpointId, requestId])
+  }, [fetchDetail, requestId])
 
   return (
     <Dialog open={Boolean(requestId)} onClose={onClose} fullWidth maxWidth="md">

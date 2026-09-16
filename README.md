@@ -8,7 +8,8 @@ A self-hosted webhook.site-style callback catcher. Sign in with Google, generate
 - **Callback endpoints** — generate unique `/hook/{id}` URLs that accept any HTTP method, with a configurable canned response (status code, headers, body, content type).
 - **Live request feed** — incoming calls appear in the dashboard instantly via Server-Sent Events, no refresh needed.
 - **Full request detail** — inspect headers, query params, and body for every call, with pagination for endpoints with a lot of history.
-- **Rate limited** — the public hook receiver is capped per caller IP to protect it from abuse.
+- **Share links** — publish a read-only link to an endpoint and everything it has recorded, viewable without signing in. Revocable at any time.
+- **Rate limited** — the public hook receiver and share-link views are capped per caller IP to protect them from abuse.
 
 ## Stack
 
@@ -69,6 +70,16 @@ print('TOKEN=' + create_access_token(user.id))
 ```
 
 Then use `Authorization: Bearer <token>` on any `/api/*` request.
+
+## Share links
+
+`POST /api/endpoints/{id}/share` returns a random token; `/shared/{token}` is a public,
+read-only page showing the endpoint and its request log, live updates included. The token is
+the only credential, so `DELETE /api/endpoints/{id}/share` kills access immediately, and
+re-sharing afterwards mints a fresh token.
+
+Shared requests are shown in full — **headers and bodies included**. Anything a webhook sender
+puts there (signing secrets, bearer tokens) is visible to whoever holds the link.
 
 ## Deployment
 

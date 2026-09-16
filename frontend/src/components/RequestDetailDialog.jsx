@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Chip,
@@ -11,19 +11,25 @@ import {
   TableBody,
   TableCell,
   TableRow,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
+import CodeBlock from './CodeBlock'
+import { decodeBody } from '../utils/body'
 
 /** `fetchDetail(requestId)` is injected so this works for both the owner's
  *  endpoints and a public share link. It must be referentially stable. */
 export default function RequestDetailDialog({ requestId, fetchDetail, onClose }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showRaw, setShowRaw] = useState(false)
 
   useEffect(() => {
     if (requestId) {
       setDetail(null)
       setLoading(true)
+      setShowRaw(false)
       fetchDetail(requestId).then((data) => {
         setDetail(data)
         setLoading(false)
@@ -33,6 +39,12 @@ export default function RequestDetailDialog({ requestId, fetchDetail, onClose })
       setLoading(false)
     }
   }, [fetchDetail, requestId])
+
+  const decoded = useMemo(
+    () => decodeBody(detail?.body, detail?.content_type),
+    [detail?.body, detail?.content_type],
+  )
+  const canDecode = decoded.kind === 'json' || decoded.kind === 'form'
 
   return (
     <Dialog open={Boolean(requestId)} onClose={onClose} fullWidth maxWidth="md">
@@ -91,26 +103,75 @@ export default function RequestDetailDialog({ requestId, fetchDetail, onClose })
             </Box>
 
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Body
-              </Typography>
-              <Box
-                component="pre"
-                sx={{
-                  bgcolor: 'action.hover',
-                  p: 2,
-                  borderRadius: 1,
-                  overflowX: 'auto',
-                  fontSize: 13,
-                  m: 0,
-                }}
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                spacing={1}
+                sx={{ mb: 1 }}
               >
-                {detail.body || '(empty)'}
-              </Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="subtitle2">Body</Typography>
+                  {detail.content_type && (
+                    <Chip size="small" variant="outlined" label={detail.content_type} />
+                  )}
+                </Stack>
+                {canDecode && (
+                  <ToggleButtonGroup
+                    size="small"
+                    exclusive
+                    value={showRaw ? 'raw' : 'decoded'}
+                    onChange={(_, value) => value && setShowRaw(value === 'raw')}
+                  >
+                    <ToggleButton value="decoded">Decoded</ToggleButton>
+                    <ToggleButton value="raw">Raw</ToggleButton>
+                  </ToggleButtonGroup>
+                )}
+              </Stack>
+
+              <RequestBody body={detail.body} decoded={decoded} showRaw={showRaw} />
             </Box>
           </Stack>
         )}
       </DialogContent>
     </Dialog>
   )
+}
+
+function RequestBody({ body, decoded, showRaw }) {
+  if (decoded.kind === 'empty') {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        (empty)
+      </Typography>
+    )
+  }
+
+  if (showRaw) return <CodeBlock text={body} />
+
+  if (decoded.kind === 'json') return <CodeBlock text={decoded.text} language="json" />
+
+  if (decoded.kind === 'form') {
+    return (
+      <Stack spacing={2}>
+        {decoded.fields.map((field, i) => (
+          <Box key={`${field.key}-${i}`}>
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}
+            >
+              {field.key}
+            </Typography>
+            {field.json ? (
+              <CodeBlock text={field.json} language="json" maxHeight={320} />
+            ) : (
+              <CodeBlock text={field.value} maxHeight={220} />
+            )}
+          </Box>
+        ))}
+      </Stack>
+    )
+  }
+
+  return <CodeBlock text={decoded.text} />
 }

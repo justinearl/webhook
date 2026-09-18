@@ -132,10 +132,25 @@ def revoke_share_link(
 def list_requests(
     limit: int = Query(25, ge=1, le=200),
     before: datetime | None = Query(None, description="Only return requests older than this timestamp"),
+    method: str | None = Query(None, max_length=16, description="Only this HTTP method"),
+    q: str | None = Query(None, max_length=200, description="Case-insensitive match on path or body"),
     endpoint: models.Endpoint = Depends(get_owned_endpoint),
     db: Session = Depends(get_db),
 ):
-    return request_views.request_page(db, endpoint.id, limit, before)
+    return request_views.request_page(db, endpoint.id, limit, before, method=method, q=q)
+
+
+@router.delete("/{endpoint_id}/requests", response_model=schemas.ClearRequestsOut)
+def clear_requests(
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
+    db: Session = Depends(get_db),
+):
+    deleted = request_views.clear_requests(db, endpoint.id)
+    logger.info(
+        "Requests cleared",
+        extra={"endpoint_id": endpoint.id, "owner_id": endpoint.owner_id, "deleted": deleted},
+    )
+    return schemas.ClearRequestsOut(deleted=deleted)
 
 
 @router.get("/{endpoint_id}/requests/{request_id}", response_model=schemas.RequestLogOut)
@@ -145,6 +160,19 @@ def get_request(
     db: Session = Depends(get_db),
 ):
     return request_views.request_detail(db, endpoint.id, request_id)
+
+
+@router.delete("/{endpoint_id}/requests/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_request(
+    request_id: str,
+    endpoint: models.Endpoint = Depends(get_owned_endpoint),
+    db: Session = Depends(get_db),
+):
+    request_views.delete_request(db, endpoint.id, request_id)
+    logger.info(
+        "Request deleted",
+        extra={"endpoint_id": endpoint.id, "owner_id": endpoint.owner_id, "request_log_id": request_id},
+    )
 
 
 @router.get("/{endpoint_id}/stream")

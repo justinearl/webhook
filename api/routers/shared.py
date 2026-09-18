@@ -65,10 +65,12 @@ def get_shared(
 def list_shared_requests(
     limit: int = Query(25, ge=1, le=200),
     before: datetime | None = Query(None, description="Only return requests older than this timestamp"),
+    method: str | None = Query(None, max_length=16, description="Only this HTTP method"),
+    q: str | None = Query(None, max_length=200, description="Case-insensitive match on path or body"),
     endpoint: models.Endpoint = Depends(get_shared_endpoint),
     db: Session = Depends(get_db),
 ):
-    return request_views.request_page(db, endpoint.id, limit, before)
+    return request_views.request_page(db, endpoint.id, limit, before, method=method, q=q)
 
 
 @router.get(

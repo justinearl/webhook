@@ -25,7 +25,9 @@ class LoginResponse(BaseModel):
 class EndpointCreate(BaseModel):
     name: str = ""
     description: str = ""
-    response_status: int = 200
+    # Anything outside 100-599 can't be put on the wire: h11 refuses it and the
+    # hook caller gets a dropped connection instead of the canned response.
+    response_status: int = Field(200, ge=100, le=599)
     response_headers: dict[str, str] = Field(default_factory=dict)
     response_body: str = ""
     response_content_type: str = "application/json"
@@ -34,7 +36,7 @@ class EndpointCreate(BaseModel):
 class EndpointUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
-    response_status: int | None = None
+    response_status: int | None = Field(None, ge=100, le=599)
     response_headers: dict[str, str] | None = None
     response_body: str | None = None
     response_content_type: str | None = None
@@ -109,3 +111,7 @@ class RequestLogSummary(BaseModel):
 class RequestLogPage(BaseModel):
     items: list[RequestLogSummary]
     has_more: bool
+
+
+class ClearRequestsOut(BaseModel):
+    deleted: int

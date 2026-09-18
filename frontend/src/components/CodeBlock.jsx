@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Box, IconButton, Tooltip } from '@mui/material'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import { MONO } from '../theme'
 
 // Hand-rolled rather than pulling in a syntax-highlighting library: request
 // bodies here are JSON, form-encoded or plain text, and this is the whole of
@@ -57,14 +58,17 @@ export default function CodeBlock({ text, language, maxHeight = 420 }) {
       <Box
         component="pre"
         sx={{
-          bgcolor: 'action.hover',
+          bgcolor: 'background.default',
+          border: 1,
+          borderColor: 'divider',
           p: 2,
           pr: 6,
-          borderRadius: 1,
+          borderRadius: 2,
           overflow: 'auto',
           maxHeight,
           fontSize: 13,
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+          fontFamily: MONO,
+          lineHeight: 1.6,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           m: 0,

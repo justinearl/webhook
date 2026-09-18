@@ -5,11 +5,9 @@ import {
   Avatar,
   Box,
   Button,
-  Divider,
   Drawer,
   IconButton,
   List,
-  ListItemAvatar,
   ListItemButton,
   ListItemText,
   Skeleton,
@@ -27,7 +25,7 @@ import EndpointFormDialog from '../components/EndpointFormDialog'
 import ConfirmDialog from '../components/ConfirmDialog'
 import ColorModeToggle from '../components/ColorModeToggle'
 
-const DRAWER_WIDTH = 300
+const DRAWER_WIDTH = 280
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth()
@@ -78,41 +76,61 @@ export default function DashboardLayout() {
   const drawerContent = (
     <>
       <Toolbar />
-      <Box sx={{ p: 2 }}>
+      <Box sx={{ px: 2, pt: 2, pb: 1 }}>
         <Button fullWidth variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
           New endpoint
         </Button>
       </Box>
-      <Divider />
-      <List sx={{ overflowY: 'auto' }}>
+      <Typography variant="overline" color="text.secondary" sx={{ px: 3, pt: 1.5, pb: 0.5, display: 'block' }}>
+        Endpoints
+      </Typography>
+      <List dense disablePadding sx={{ overflowY: 'auto', pb: 2 }}>
         {endpointsLoading &&
           Array.from({ length: 3 }).map((_, i) => (
             <ListItemButton key={i} disabled>
-              <ListItemAvatar>
-                <Skeleton variant="circular" width={40} height={40} />
-              </ListItemAvatar>
-              <ListItemText primary={<Skeleton width="70%" />} secondary={<Skeleton width="40%" />} />
+              <ListItemText primary={<Skeleton width="60%" />} />
+              <Skeleton width={28} height={20} />
             </ListItemButton>
           ))}
         {!endpointsLoading &&
-          endpoints.map((ep) => (
-            <ListItemButton
-              key={ep.id}
-              selected={ep.id === endpointId}
-              onClick={() => handleSelectEndpoint(ep.id)}
-            >
-              <ListItemAvatar>
-                <Avatar sx={{ bgcolor: 'primary.light' }}>{(ep.name || ep.id)[0].toUpperCase()}</Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={ep.name || ep.id.slice(0, 8)}
-                secondary={`${ep.request_count} call${ep.request_count === 1 ? '' : 's'}`}
-              />
-            </ListItemButton>
-          ))}
+          endpoints.map((ep) => {
+            const selected = ep.id === endpointId
+            return (
+              <ListItemButton key={ep.id} selected={selected} onClick={() => handleSelectEndpoint(ep.id)}>
+                <ListItemText
+                  primary={ep.name || 'Untitled endpoint'}
+                  slotProps={{
+                    primary: {
+                      noWrap: true,
+                      sx: {
+                        fontWeight: selected ? 600 : 500,
+                        color: ep.name ? 'text.primary' : 'text.secondary',
+                        fontStyle: ep.name ? 'normal' : 'italic',
+                      },
+                    },
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    ml: 1,
+                    px: 0.75,
+                    py: 0.25,
+                    borderRadius: 1,
+                    fontWeight: 600,
+                    fontVariantNumeric: 'tabular-nums',
+                    color: selected ? 'primary.main' : 'text.secondary',
+                    bgcolor: 'action.selected',
+                  }}
+                >
+                  {ep.request_count}
+                </Typography>
+              </ListItemButton>
+            )
+          })}
         {!endpointsLoading && endpoints.length === 0 && (
-          <Typography variant="body2" color="text.secondary" sx={{ px: 2 }}>
-            No endpoints yet — create one to get started.
+          <Typography variant="body2" color="text.secondary" sx={{ px: 3, py: 1 }}>
+            No endpoints yet. Create one to get started.
           </Typography>
         )}
       </List>
@@ -121,7 +139,7 @@ export default function DashboardLayout() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }} color="inherit" elevation={0}>
+      <AppBar position="fixed" sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
         <Toolbar sx={{ gap: 1 }}>
           <IconButton
             edge="start"
@@ -130,17 +148,17 @@ export default function DashboardLayout() {
           >
             <MenuIcon />
           </IconButton>
-          <WebhookIcon color="primary" />
+          <WebhookIcon color="primary" fontSize="small" />
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Webhook Catcher
           </Typography>
           <ColorModeToggle />
           {user && (
             <>
-              <Avatar src={user.picture} sx={{ width: 32, height: 32, mr: 1 }}>
+              <Avatar src={user.picture} sx={{ width: 28, height: 28, ml: 0.5, fontSize: 13 }}>
                 {user.name?.[0]}
               </Avatar>
-              <Typography variant="body2" sx={{ mr: 1, display: { xs: 'none', sm: 'block' } }}>
+              <Typography variant="body2" sx={{ mr: 0.5, display: { xs: 'none', sm: 'block' } }}>
                 {user.name}
               </Typography>
               <Tooltip title="Log out">

@@ -25,9 +25,11 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import SearchIcon from '@mui/icons-material/Search'
 import ConfirmDialog from './ConfirmDialog'
+import MethodBadge from './MethodBadge'
 import RequestDetailDialog from './RequestDetailDialog'
 import { StreamRejectedError } from '../api/stream'
 import { formatRelative } from '../utils/time'
+import { MONO } from '../theme'
 
 const STREAM_RETRY_MS = 2000
 const PAGE_SIZE = 25
@@ -36,14 +38,6 @@ const CLOCK_TICK_MS = 15_000
 const NEW_ROW_HIGHLIGHT_MS = 2500
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
-
-const METHOD_COLORS = {
-  GET: 'success',
-  POST: 'info',
-  PUT: 'warning',
-  PATCH: 'warning',
-  DELETE: 'error',
-}
 
 /**
  * The request log table, its live-update stream, filters and pagination.
@@ -226,13 +220,16 @@ export default function RequestsPanel({
     <>
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', sm: 'center' }}
         spacing={1}
-        sx={{ mb: 1 }}
+        sx={{ mb: 1, justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' } }}
       >
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="subtitle1">Requests ({requestCount})</Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Typography variant="subtitle1">
+            Requests
+            <Typography component="span" variant="subtitle1" color="text.secondary" sx={{ ml: 0.75, fontWeight: 500 }}>
+              {requestCount}
+            </Typography>
+          </Typography>
           {live && (
             <Chip
               size="small"
@@ -249,13 +246,13 @@ export default function RequestsPanel({
           )}
         </Stack>
 
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <TextField
             select
             size="small"
             value={method}
             onChange={(e) => setMethod(e.target.value)}
-            sx={{ minWidth: 110 }}
+            sx={{ minWidth: 120 }}
             slotProps={{ select: { displayEmpty: true } }}
           >
             <MenuItem value="">All methods</MenuItem>
@@ -315,10 +312,12 @@ export default function RequestsPanel({
         <Table size="small" stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: 100 }}>Method</TableCell>
+              <TableCell sx={{ width: 90 }}>Method</TableCell>
               <TableCell>Path</TableCell>
-              <TableCell sx={{ width: 160 }}>Client IP</TableCell>
-              <TableCell sx={{ width: 140 }}>Time</TableCell>
+              <TableCell sx={{ width: 160, display: { xs: 'none', md: 'table-cell' } }}>Client IP</TableCell>
+              <TableCell sx={{ width: 120 }} align="right">
+                Time
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -331,19 +330,20 @@ export default function RequestsPanel({
                 onClick={() => setSelectedRequestId(r.id)}
               >
                 <TableCell>
-                  <Chip size="small" color={METHOD_COLORS[r.method] || 'default'} label={r.method} />
+                  <MethodBadge method={r.method} />
                 </TableCell>
+                <TableCell sx={{ fontFamily: MONO, fontSize: 13, wordBreak: 'break-all' }}>{r.path}</TableCell>
                 <TableCell
                   sx={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-                    fontSize: 13,
-                    wordBreak: 'break-all',
+                    color: 'text.secondary',
+                    fontFamily: MONO,
+                    fontSize: 12.5,
+                    display: { xs: 'none', md: 'table-cell' },
                   }}
                 >
-                  {r.path}
+                  {r.client_ip}
                 </TableCell>
-                <TableCell sx={{ color: 'text.secondary' }}>{r.client_ip}</TableCell>
-                <TableCell>
+                <TableCell align="right" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
                   <Tooltip title={new Date(r.created_at).toLocaleString()}>
                     <span>{formatRelative(r.created_at, now)}</span>
                   </Tooltip>
@@ -352,8 +352,8 @@ export default function RequestsPanel({
             ))}
             {requests.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4}>
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                <TableCell colSpan={4} sx={{ borderBottom: 0 }}>
+                  <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 5 }}>
                     {loading ? 'Loading…' : filtering ? 'No requests match these filters.' : emptyMessage}
                   </Typography>
                 </TableCell>

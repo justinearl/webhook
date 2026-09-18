@@ -21,6 +21,8 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import TerminalIcon from '@mui/icons-material/Terminal'
 import CodeBlock from './CodeBlock'
 import ConfirmDialog from './ConfirmDialog'
+import MethodBadge from './MethodBadge'
+import { MONO } from '../theme'
 import { decodeBody } from '../utils/body'
 import { toCurl } from '../utils/curl'
 
@@ -80,28 +82,28 @@ export default function RequestDetailDialog({ requestId, hookUrl, fetchDetail, o
         )}
         {!loading && detail && (
           <Stack spacing={3}>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Chip label={detail.method} color="primary" />
-              <Typography variant="body2">{detail.path}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                from {detail.client_ip}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
+            <Box>
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                <MethodBadge method={detail.method} size="medium" />
+                <Typography sx={{ fontFamily: MONO, fontSize: 14, wordBreak: 'break-all' }}>{detail.path}</Typography>
+              </Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
                 {new Date(detail.created_at).toLocaleString()}
+                {detail.client_ip && ` · from ${detail.client_ip}`}
               </Typography>
-            </Stack>
+            </Box>
 
             {Object.keys(detail.query_params || {}).length > 0 && (
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="overline" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
                   Query params
                 </Typography>
                 <Table size="small">
                   <TableBody>
                     {Object.entries(detail.query_params).map(([k, v]) => (
                       <TableRow key={k}>
-                        <TableCell sx={{ fontWeight: 600, width: 220 }}>{k}</TableCell>
-                        <TableCell sx={{ wordBreak: 'break-all' }}>{v}</TableCell>
+                        <TableCell sx={{ fontFamily: MONO, fontSize: 12.5, width: 220, color: 'text.secondary' }}>{k}</TableCell>
+                        <TableCell sx={{ fontFamily: MONO, fontSize: 12.5, wordBreak: 'break-all' }}>{v}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -110,15 +112,15 @@ export default function RequestDetailDialog({ requestId, hookUrl, fetchDetail, o
             )}
 
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
+              <Typography variant="overline" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
                 Headers
               </Typography>
               <Table size="small">
                 <TableBody>
                   {Object.entries(detail.headers || {}).map(([k, v]) => (
                     <TableRow key={k}>
-                      <TableCell sx={{ fontWeight: 600, width: 220 }}>{k}</TableCell>
-                      <TableCell sx={{ wordBreak: 'break-all' }}>{v}</TableCell>
+                      <TableCell sx={{ fontFamily: MONO, fontSize: 12.5, width: 220, color: 'text.secondary' }}>{k}</TableCell>
+                      <TableCell sx={{ fontFamily: MONO, fontSize: 12.5, wordBreak: 'break-all' }}>{v}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -128,13 +130,13 @@ export default function RequestDetailDialog({ requestId, hookUrl, fetchDetail, o
             <Box>
               <Stack
                 direction="row"
-                justifyContent="space-between"
-                alignItems="center"
                 spacing={1}
-                sx={{ mb: 1 }}
+                sx={{ mb: 1, justifyContent: 'space-between', alignItems: 'center' }}
               >
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="subtitle2">Body</Typography>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <Typography variant="overline" color="text.secondary" component="div">
+                    Body
+                  </Typography>
                   {detail.content_type && (
                     <Chip size="small" variant="outlined" label={detail.content_type} />
                   )}

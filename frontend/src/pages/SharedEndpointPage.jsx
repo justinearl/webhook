@@ -1,33 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import {
-  Alert,
-  AppBar,
-  Box,
-  Chip,
-  CircularProgress,
-  IconButton,
-  InputAdornment,
-  Paper,
-  Stack,
-  TextField,
-  Toolbar,
-  Tooltip,
-  Typography,
-} from '@mui/material'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
-import VisibilityIcon from '@mui/icons-material/Visibility'
+import { Alert, AppBar, Box, Chip, CircularProgress, Paper, Stack, Toolbar, Typography } from '@mui/material'
+import VisibilityIcon from '@mui/icons-material/VisibilityOutlined'
 import WebhookIcon from '@mui/icons-material/Webhook'
 import { getSharedEndpoint, getSharedRequest, listSharedRequests } from '../api/shared'
 import { streamSharedRequests } from '../api/stream'
 import RequestsPanel from '../components/RequestsPanel'
 import ColorModeToggle from '../components/ColorModeToggle'
+import HookUrlField from '../components/HookUrlField'
 
 export default function SharedEndpointPage() {
   const { token } = useParams()
   const [endpoint, setEndpoint] = useState(null)
   const [error, setError] = useState('')
-  const [copied, setCopied] = useState(false)
 
   const loadEndpoint = useCallback(async () => {
     try {
@@ -50,17 +35,11 @@ export default function SharedEndpointPage() {
 
   const hookUrl = endpoint ? `${window.location.origin}/hook/${endpoint.id}` : ''
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(hookUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
-
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="static" color="inherit" elevation={0}>
+      <AppBar position="static">
         <Toolbar sx={{ gap: 1 }}>
-          <WebhookIcon color="primary" />
+          <WebhookIcon color="primary" fontSize="small" />
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Webhook Catcher
           </Typography>
@@ -69,7 +48,7 @@ export default function SharedEndpointPage() {
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ p: 3, maxWidth: 1100, mx: 'auto' }}>
+      <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 1100, mx: 'auto' }}>
         {error && <Alert severity="error">{error}</Alert>}
 
         {!error && !endpoint && (
@@ -80,39 +59,20 @@ export default function SharedEndpointPage() {
 
         {endpoint && (
           <>
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 2.5 }}>
               <Typography variant="h5">{endpoint.name || 'Untitled endpoint'}</Typography>
               {endpoint.description && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
                   {endpoint.description}
                 </Typography>
               )}
             </Box>
 
             <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-              <TextField
-                fullWidth
-                size="small"
-                label="Endpoint URL"
-                value={hookUrl}
-                slotProps={{
-                  input: {
-                    readOnly: true,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Tooltip title={copied ? 'Copied!' : 'Copy'}>
-                          <IconButton onClick={handleCopy}>
-                            <ContentCopyIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                <Chip size="small" label={`Responds ${endpoint.response_status}`} />
-                <Chip size="small" label={endpoint.response_content_type} variant="outlined" />
+              <HookUrlField url={hookUrl} />
+              <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1.5, flexWrap: 'wrap' }}>
+                <Chip size="small" variant="outlined" label={`Responds ${endpoint.response_status}`} />
+                <Chip size="small" variant="outlined" label={endpoint.response_content_type} />
               </Stack>
             </Paper>
 

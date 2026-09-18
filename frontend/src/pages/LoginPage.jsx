@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom'
 import { Alert, Box, CircularProgress, Paper, Stack, Typography } from '@mui/material'
 import WebhookIcon from '@mui/icons-material/Webhook'
 import { useAuth } from '../context/AuthContext'
+import ColorModeToggle from '../components/ColorModeToggle'
 
 export default function LoginPage() {
   const { user, loginWithGoogle } = useAuth()
@@ -20,17 +21,36 @@ export default function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         bgcolor: 'background.default',
+        p: 2,
+        position: 'relative',
       }}
     >
-      <Paper elevation={3} sx={{ p: 5, maxWidth: 420, width: '100%' }}>
-        <Stack spacing={3} alignItems="center">
-          <WebhookIcon color="primary" sx={{ fontSize: 40 }} />
-          <Typography variant="h5" fontWeight={700}>
-            Webhook Catcher
-          </Typography>
-          <Typography variant="body2" color="text.secondary" textAlign="center">
-            Sign in with Google to create callback endpoints and inspect every request they receive.
-          </Typography>
+      <Box sx={{ position: 'absolute', top: 12, right: 12 }}>
+        <ColorModeToggle />
+      </Box>
+      <Paper variant="outlined" sx={{ p: { xs: 3, sm: 5 }, maxWidth: 400, width: '100%' }}>
+        <Stack spacing={3} sx={{ alignItems: 'center' }}>
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: 3,
+              display: 'grid',
+              placeItems: 'center',
+              color: 'primary.main',
+              bgcolor: (t) => `rgba(${t.vars.palette.primary.mainChannel} / 0.12)`,
+            }}
+          >
+            <WebhookIcon sx={{ fontSize: 30 }} />
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h5" gutterBottom>
+              Webhook Catcher
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Create callback URLs, point any webhook at them, and watch requests arrive in real time.
+            </Typography>
+          </Box>
           {error && (
             <Alert severity="error" sx={{ width: '100%' }}>
               {error}
@@ -40,6 +60,8 @@ export default function LoginPage() {
             <CircularProgress size={32} />
           ) : (
             <GoogleLogin
+              shape="pill"
+              width="300"
               onSuccess={async (credentialResponse) => {
                 try {
                   setError('')

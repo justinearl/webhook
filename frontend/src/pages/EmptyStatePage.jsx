@@ -9,12 +9,31 @@ export default function EmptyStatePage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '80vh',
-        color: 'text.secondary',
+        minHeight: '70vh',
+        textAlign: 'center',
+        px: 3,
       }}
     >
-      <WebhookIcon sx={{ fontSize: 64, mb: 2 }} />
-      <Typography variant="h6">Select an endpoint or create a new one</Typography>
+      <Box
+        sx={{
+          width: 64,
+          height: 64,
+          borderRadius: 3,
+          display: 'grid',
+          placeItems: 'center',
+          mb: 2.5,
+          color: 'primary.main',
+          bgcolor: (t) => `rgba(${t.vars.palette.primary.mainChannel} / 0.12)`,
+        }}
+      >
+        <WebhookIcon sx={{ fontSize: 32 }} />
+      </Box>
+      <Typography variant="h6" gutterBottom>
+        No endpoint selected
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
+        Pick one from the sidebar, or create a new endpoint to get a URL you can send webhooks to.
+      </Typography>
     </Box>
   )
 }

@@ -8,6 +8,10 @@ A self-hosted webhook.site-style callback catcher. Sign in with Google, generate
 - **Callback endpoints** — generate unique `/hook/{id}` URLs that accept any HTTP method, with a configurable canned response (status code, headers, body, content type).
 - **Live request feed** — incoming calls appear in the dashboard instantly via Server-Sent Events, no refresh needed.
 - **Full request detail** — inspect headers, query params, and body for every call, with pagination for endpoints with a lot of history.
+- **Search and filter** — narrow the log by HTTP method, or search path and body text.
+- **Replay with cURL** — copy any recorded request as a `curl` command to replay it against local code.
+- **Delete and clear** — remove a single recorded request, or wipe an endpoint's whole history while keeping the endpoint.
+- **Light and dark mode** — follows the system preference, with a toggle in the app bar.
 - **Share links** — publish a read-only link to an endpoint and everything it has recorded, viewable without signing in. Revocable at any time.
 - **Rate limited** — the public hook receiver and share-link views are capped per caller IP to protect them from abuse.
 
@@ -70,6 +74,14 @@ print('TOKEN=' + create_access_token(user.id))
 ```
 
 Then use `Authorization: Bearer <token>` on any `/api/*` request.
+
+### Running the tests
+
+```bash
+uv run pytest
+```
+
+The tests run against a throwaway SQLite database with in-process pub/sub and no Logfire export, so they need no services and no `.envrc`.
 
 ## Share links
 

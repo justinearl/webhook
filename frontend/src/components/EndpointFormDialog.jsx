@@ -45,7 +45,14 @@ export default function EndpointFormDialog({ open, onClose, onSubmit, initialVal
 
   const handleChange = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
+  const statusValue = Number(form.response_status)
+  const statusInvalid = !Number.isInteger(statusValue) || statusValue < 100 || statusValue > 599
+
   const handleSubmit = async () => {
+    if (statusInvalid) {
+      setError('Response status must be a whole number between 100 and 599')
+      return
+    }
     let headers
     try {
       headers = JSON.parse(form.response_headers || '{}')
@@ -59,7 +66,7 @@ export default function EndpointFormDialog({ open, onClose, onSubmit, initialVal
       await onSubmit({
         name: form.name,
         description: form.description,
-        response_status: Number(form.response_status) || 200,
+        response_status: statusValue,
         response_content_type: form.response_content_type,
         response_body: form.response_body,
         response_headers: headers,
@@ -92,6 +99,9 @@ export default function EndpointFormDialog({ open, onClose, onSubmit, initialVal
               type="number"
               value={form.response_status}
               onChange={handleChange('response_status')}
+              error={statusInvalid}
+              helperText={statusInvalid ? '100–599' : ' '}
+              slotProps={{ htmlInput: { min: 100, max: 599, step: 1 } }}
               sx={{ width: 180 }}
             />
             <TextField

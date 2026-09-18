@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   Stack,
@@ -15,28 +17,43 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material'
+import DeleteIcon from '@mui/icons-material/DeleteOutlined'
+import TerminalIcon from '@mui/icons-material/Terminal'
 import CodeBlock from './CodeBlock'
+import ConfirmDialog from './ConfirmDialog'
 import { decodeBody } from '../utils/body'
+import { toCurl } from '../utils/curl'
 
 /** `fetchDetail(requestId)` is injected so this works for both the owner's
- *  endpoints and a public share link. It must be referentially stable. */
-export default function RequestDetailDialog({ requestId, fetchDetail, onClose }) {
+ *  endpoints and a public share link. It must be referentially stable.
+ *  `onDelete(requestId)` is optional and only offered to the owner. */
+export default function RequestDetailDialog({ requestId, hookUrl, fetchDetail, onDelete, onClose }) {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   useEffect(() => {
-    if (requestId) {
-      setDetail(null)
-      setLoading(true)
-      setShowRaw(false)
-      fetchDetail(requestId).then((data) => {
-        setDetail(data)
-        setLoading(false)
-      })
-    } else {
-      setDetail(null)
+    setDetail(null)
+    setShowRaw(false)
+    if (!requestId) {
       setLoading(false)
+      return undefined
+    }
+    // Guard against out-of-order responses: open A, close, open B quickly, and
+    // A's fetch resolving last must not overwrite B.
+    let stale = false
+    setLoading(true)
+    fetchDetail(requestId)
+      .then((data) => {
+        if (!stale) setDetail(data)
+      })
+      .finally(() => {
+        if (!stale) setLoading(false)
+      })
+    return () => {
+      stale = true
     }
   }, [fetchDetail, requestId])
 
@@ -45,6 +62,12 @@ export default function RequestDetailDialog({ requestId, fetchDetail, onClose })
     [detail?.body, detail?.content_type],
   )
   const canDecode = decoded.kind === 'json' || decoded.kind === 'form'
+
+  const handleCopyCurl = async () => {
+    await navigator.clipboard.writeText(toCurl(detail, hookUrl))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <Dialog open={Boolean(requestId)} onClose={onClose} fullWidth maxWidth="md">
@@ -134,6 +157,32 @@ export default function RequestDetailDialog({ requestId, fetchDetail, onClose })
           </Stack>
         )}
       </DialogContent>
+      <DialogActions>
+        {detail && hookUrl && (
+          <Button startIcon={<TerminalIcon />} onClick={handleCopyCurl}>
+            {copied ? 'Copied!' : 'Copy as cURL'}
+          </Button>
+        )}
+        <Box sx={{ flexGrow: 1 }} />
+        {detail && onDelete && (
+          <Button color="error" startIcon={<DeleteIcon />} onClick={() => setDeleteConfirmOpen(true)}>
+            Delete
+          </Button>
+        )}
+        <Button onClick={onClose}>Close</Button>
+      </DialogActions>
+
+      {onDelete && (
+        <ConfirmDialog
+          open={deleteConfirmOpen}
+          onClose={() => setDeleteConfirmOpen(false)}
+          onConfirm={() => onDelete(requestId)}
+          title="Delete this request?"
+          description="This permanently removes the recorded request. This can't be undone."
+          confirmLabel="Delete"
+          confirmColor="error"
+        />
+      )}
     </Dialog>
   )
 }

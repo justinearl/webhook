@@ -25,6 +25,7 @@ import { useAuth } from '../context/AuthContext'
 import { createEndpoint, deleteEndpoint, listEndpoints } from '../api/endpoints'
 import EndpointFormDialog from '../components/EndpointFormDialog'
 import ConfirmDialog from '../components/ConfirmDialog'
+import ColorModeToggle from '../components/ColorModeToggle'
 
 const DRAWER_WIDTH = 300
 
@@ -133,12 +134,13 @@ export default function DashboardLayout() {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Webhook Catcher
           </Typography>
+          <ColorModeToggle />
           {user && (
             <>
               <Avatar src={user.picture} sx={{ width: 32, height: 32, mr: 1 }}>
                 {user.name?.[0]}
               </Avatar>
-              <Typography variant="body2" sx={{ mr: 1 }}>
+              <Typography variant="body2" sx={{ mr: 1, display: { xs: 'none', sm: 'block' } }}>
                 {user.name}
               </Typography>
               <Tooltip title="Log out">

@@ -1,8 +1,21 @@
 // Native fetch + ReadableStream instead of EventSource: EventSource can't send
 // custom headers, and this app authenticates with a Bearer token, not cookies.
+
+/** Thrown when the server refuses the stream outright (4xx). Retrying won't help. */
+export class StreamRejectedError extends Error {
+  constructor(status) {
+    super(`Stream request rejected with status ${status}`)
+    this.name = 'StreamRejectedError'
+    this.status = status
+  }
+}
+
 async function streamSSE(url, { onEvent, onOpen, signal, headers = {} }) {
   const response = await fetch(url, { headers, signal })
 
+  if (response.status >= 400 && response.status < 500) {
+    throw new StreamRejectedError(response.status)
+  }
   if (!response.ok || !response.body) {
     throw new Error(`Stream request failed with status ${response.status}`)
   }

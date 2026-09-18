@@ -21,6 +21,7 @@ import WebhookIcon from '@mui/icons-material/Webhook'
 import { getSharedEndpoint, getSharedRequest, listSharedRequests } from '../api/shared'
 import { streamSharedRequests } from '../api/stream'
 import RequestsPanel from '../components/RequestsPanel'
+import ColorModeToggle from '../components/ColorModeToggle'
 
 export default function SharedEndpointPage() {
   const { token } = useParams()
@@ -64,6 +65,7 @@ export default function SharedEndpointPage() {
             Webhook Catcher
           </Typography>
           <Chip size="small" variant="outlined" icon={<VisibilityIcon />} label="Read-only" />
+          <ColorModeToggle />
         </Toolbar>
       </AppBar>
 
@@ -116,6 +118,7 @@ export default function SharedEndpointPage() {
 
             <RequestsPanel
               requestCount={endpoint.request_count}
+              hookUrl={hookUrl}
               fetchPage={fetchPage}
               fetchDetail={fetchDetail}
               openStream={openStream}

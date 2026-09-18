@@ -17,7 +17,14 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import ShareIcon from '@mui/icons-material/Share'
-import { getEndpoint, getRequest, listRequests, updateEndpoint } from '../api/endpoints'
+import {
+  clearRequests,
+  deleteRequest,
+  getEndpoint,
+  getRequest,
+  listRequests,
+  updateEndpoint,
+} from '../api/endpoints'
 import { streamEndpointRequests } from '../api/stream'
 import EndpointFormDialog from '../components/EndpointFormDialog'
 import RequestsPanel from '../components/RequestsPanel'
@@ -40,10 +47,17 @@ export default function EndpointDetailPage() {
   }, [endpointId])
 
   useEffect(() => {
-    // Clear stale data immediately so switching endpoints never shows the wrong one mid-fetch.
+    // Clear stale data immediately so switching endpoints never shows the wrong
+    // one mid-fetch, and drop the old fetch's result if it lands after we moved on.
     setEndpoint(null)
-    loadEndpoint()
-  }, [loadEndpoint])
+    let stale = false
+    getEndpoint(endpointId).then((data) => {
+      if (!stale) setEndpoint(data)
+    })
+    return () => {
+      stale = true
+    }
+  }, [endpointId])
 
   // Stable identities: RequestsPanel reconnects its stream whenever these change.
   const fetchPage = useCallback((params) => listRequests(endpointId, params), [endpointId])
@@ -52,6 +66,8 @@ export default function EndpointDetailPage() {
     (handlers) => streamEndpointRequests(endpointId, handlers),
     [endpointId],
   )
+  const removeRequest = useCallback((requestId) => deleteRequest(endpointId, requestId), [endpointId])
+  const removeAllRequests = useCallback(() => clearRequests(endpointId), [endpointId])
   const onRequestsChanged = useCallback(async () => {
     await Promise.all([loadEndpoint(), refresh()])
   }, [loadEndpoint, refresh])
@@ -136,9 +152,12 @@ export default function EndpointDetailPage() {
 
       <RequestsPanel
         requestCount={endpoint.request_count}
+        hookUrl={hookUrl}
         fetchPage={fetchPage}
         fetchDetail={fetchDetail}
         openStream={openStream}
+        deleteRequest={removeRequest}
+        clearRequests={removeAllRequests}
         onRequestsChanged={onRequestsChanged}
         emptyMessage="No calls received yet. Send a request to the URL above."
       />

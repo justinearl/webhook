@@ -7,19 +7,12 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 // what JSON needs.
 const JSON_TOKEN = /("(?:\\.|[^"\\])*"\s*:?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g
 
-const COLORS = {
-  key: '#1971c2',
-  string: '#2b8a3e',
-  number: '#e8590c',
-  boolean: '#9c36b5',
-  null: '#868e96',
-}
-
+// Palette keys under `code` in theme.js, so they follow the light/dark mode.
 function colorFor(token) {
-  if (token.startsWith('"')) return token.trimEnd().endsWith(':') ? COLORS.key : COLORS.string
-  if (token === 'true' || token === 'false') return COLORS.boolean
-  if (token === 'null') return COLORS.null
-  return COLORS.number
+  if (token.startsWith('"')) return token.trimEnd().endsWith(':') ? 'code.key' : 'code.string'
+  if (token === 'true' || token === 'false') return 'code.boolean'
+  if (token === 'null') return 'code.null'
+  return 'code.number'
 }
 
 function highlightJson(text) {

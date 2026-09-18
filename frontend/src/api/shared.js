@@ -7,7 +7,9 @@ const publicApi = axios.create({ baseURL: '/api' })
 const base = (token) => `/shared/${encodeURIComponent(token)}`
 
 export const getSharedEndpoint = (token) => publicApi.get(base(token)).then((r) => r.data)
-export const listSharedRequests = (token, { limit = 25, before } = {}) =>
-  publicApi.get(`${base(token)}/requests`, { params: { limit, before } }).then((r) => r.data)
+export const listSharedRequests = (token, { limit = 25, before, method, q } = {}) =>
+  publicApi
+    .get(`${base(token)}/requests`, { params: { limit, before, method: method || undefined, q: q || undefined } })
+    .then((r) => r.data)
 export const getSharedRequest = (token, requestId) =>
   publicApi.get(`${base(token)}/requests/${requestId}`).then((r) => r.data)

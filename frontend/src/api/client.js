@@ -10,4 +10,20 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status
+    const url = error?.config?.url || ''
+    // A 401 from anything but the login call itself means the session token is
+    // expired or invalid. Drop it and start over rather than leaving the
+    // dashboard up with every request failing.
+    if (status === 401 && !url.startsWith('/auth/login') && localStorage.getItem('webhook_token')) {
+      localStorage.removeItem('webhook_token')
+      window.location.assign('/login')
+    }
+    return Promise.reject(error)
+  },
+)
+
 export default api
